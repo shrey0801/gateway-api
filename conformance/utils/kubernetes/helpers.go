@@ -41,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	xv1alpha1 "sigs.k8s.io/gateway-api/apisx/v1alpha1"
 	"sigs.k8s.io/gateway-api/conformance/utils/config"
 	"sigs.k8s.io/gateway-api/conformance/utils/tlog"
 )
@@ -1612,6 +1613,71 @@ func BackendTLSPolicyMustHaveLatestConditions(t *testing.T, r *gatewayv1.Backend
 
 		if err := ConditionsHaveLatestObservedGeneration(r, ancestor.Conditions); err != nil {
 			tlog.Fatalf(t, "BackendTLSPolicy(controller=%v, ancestorRef=%#v) %v", ancestor.ControllerName, parentRefToString(ancestor.AncestorRef), err)
+		}
+	}
+}
+
+// TelemetryPolicyMustHaveCondition checks that the created XTelemetryPolicy has
+// the Condition for the ancestor gwNN, halting after the specified timeout is
+// exceeded.
+func TelemetryPolicyMustHaveCondition(t *testing.T, client client.Client, timeoutConfig config.TimeoutConfig, policyNN, gwNN types.NamespacedName, condition metav1.Condition) {
+	t.Helper()
+	waitErr := wait.PollUntilContextTimeout(context.Background(), timeoutConfig.DefaultPollInterval, timeoutConfig.TelemetryPolicyMustHaveCondition, true, func(ctx context.Context) (bool, error) {
+		policy := &xv1alpha1.XTelemetryPolicy{}
+		err := client.Get(ctx, policyNN, policy)
+		if err != nil {
+			return false, fmt.Errorf("error fetching XTelemetryPolicy %v err: %w", policyNN, err)
+		}
+
+		for _, ancestor := range policy.Status.Ancestors {
+			if ancestor.ControllerName == StaleControllerName {
+				continue
+			}
+
+			if err := ConditionsHaveLatestObservedGeneration(policy, ancestor.Conditions); err != nil {
+				tlog.Logf(t, "XTelemetryPolicy %s (ancestorRef=%v) %v",
+					policyNN, parentRefToString(ancestor.AncestorRef), err,
+				)
+				return false, nil
+			}
+
+			if ancestor.AncestorRef.Name == gatewayv1.ObjectName(gwNN.Name) && (ancestor.AncestorRef.Namespace == nil || string(*ancestor.AncestorRef.Namespace) == gwNN.Namespace) {
+				if findConditionInList(t, ancestor.Conditions, condition.Type, string(condition.Status), condition.Reason) {
+					return true, nil
+				}
+			}
+		}
+
+		return false, nil
+	})
+
+	require.NoErrorf(t, waitErr, "error waiting for XTelemetryPolicy %v status to have a Condition %v", policyNN, condition)
+}
+
+// TelemetryPolicyMustHaveAcceptedConditionTrue checks that the created
+// XTelemetryPolicy has an Accepted condition set to True with reason Accepted
+// for the ancestor gwNN.
+func TelemetryPolicyMustHaveAcceptedConditionTrue(t *testing.T, client client.Client, timeoutConfig config.TimeoutConfig, policyNN, gwNN types.NamespacedName) {
+	t.Helper()
+	TelemetryPolicyMustHaveCondition(t, client, timeoutConfig, policyNN, gwNN, metav1.Condition{
+		Type:   string(gatewayv1.PolicyConditionAccepted),
+		Status: metav1.ConditionTrue,
+		Reason: string(gatewayv1.PolicyReasonAccepted),
+	})
+}
+
+// TelemetryPolicyMustHaveLatestConditions will fail the test if there are
+// conditions that were not updated
+func TelemetryPolicyMustHaveLatestConditions(t *testing.T, p *xv1alpha1.XTelemetryPolicy) {
+	t.Helper()
+
+	for _, ancestor := range p.Status.Ancestors {
+		if ancestor.ControllerName == StaleControllerName {
+			continue
+		}
+
+		if err := ConditionsHaveLatestObservedGeneration(p, ancestor.Conditions); err != nil {
+			tlog.Fatalf(t, "XTelemetryPolicy(controller=%v, ancestorRef=%#v) %v", ancestor.ControllerName, parentRefToString(ancestor.AncestorRef), err)
 		}
 	}
 }

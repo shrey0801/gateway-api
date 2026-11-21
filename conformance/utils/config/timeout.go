@@ -92,6 +92,25 @@ type TimeoutConfig struct {
 	// Max value for conformant implementation: None
 	UDPRouteMustHaveCondition time.Duration `json:"udpRouteMustHaveCondition"`
 
+	// TelemetryPolicyMustHaveCondition represents the maximum time for a TelemetryPolicy to have the supplied Condition.
+	// Max value for conformant implementation: None
+	TelemetryPolicyMustHaveCondition time.Duration `json:"telemetryPolicyMustHaveCondition"`
+
+	// TraceExportTimeout represents the maximum time for a span produced by a traced request to be
+	// exported by the implementation and observed in the conformance trace sink.
+	// Max value for conformant implementation: None
+	TraceExportTimeout time.Duration `json:"traceExportTimeout"`
+
+	// TraceAbsenceWindow represents the time to wait after a traced request before concluding that
+	// no span was exported for it. It should be longer than the implementation's trace export interval.
+	// Max value for conformant implementation: None
+	TraceAbsenceWindow time.Duration `json:"traceAbsenceWindow"`
+
+	// TraceAbsenceTimeout represents the maximum time for the required number of consecutive
+	// "no span exported" probes to succeed before failing the test.
+	// Max value for conformant implementation: None
+	TraceAbsenceTimeout time.Duration `json:"traceAbsenceTimeout"`
+
 	// RouteMustHaveParents represents the maximum time for an xRoute to have parents in status that match the expected parents.
 	// Max value for conformant implementation: None
 	RouteMustHaveParents time.Duration `json:"routeMustHaveParents"`
@@ -211,6 +230,10 @@ func DefaultTimeoutConfig() TimeoutConfig {
 		TLSRouteMustHaveCondition:              60 * time.Second,
 		TCPRouteMustHaveCondition:              60 * time.Second,
 		UDPRouteMustHaveCondition:              60 * time.Second,
+		TelemetryPolicyMustHaveCondition:       60 * time.Second,
+		TraceExportTimeout:                     60 * time.Second,
+		TraceAbsenceWindow:                     10 * time.Second,
+		TraceAbsenceTimeout:                    120 * time.Second,
 		RouteMustHaveParents:                   60 * time.Second,
 		ManifestFetchTimeout:                   10 * time.Second,
 		MaxTimeToConsistency:                   30 * time.Second,
@@ -273,6 +296,14 @@ func ParseTimeoutOverrides(timeoutConfig *TimeoutConfig, overrides string) {
 			timeoutConfig.TCPRouteMustHaveCondition = overrideDuration
 		case "UDPRouteMustHaveCondition":
 			timeoutConfig.UDPRouteMustHaveCondition = overrideDuration
+		case "TelemetryPolicyMustHaveCondition":
+			timeoutConfig.TelemetryPolicyMustHaveCondition = overrideDuration
+		case "TraceExportTimeout":
+			timeoutConfig.TraceExportTimeout = overrideDuration
+		case "TraceAbsenceWindow":
+			timeoutConfig.TraceAbsenceWindow = overrideDuration
+		case "TraceAbsenceTimeout":
+			timeoutConfig.TraceAbsenceTimeout = overrideDuration
 		case "RouteMustHaveParents":
 			timeoutConfig.RouteMustHaveParents = overrideDuration
 		case "ManifestFetchTimeout":
@@ -361,6 +392,18 @@ func SetupTimeoutConfig(timeoutConfig *TimeoutConfig) {
 	}
 	if timeoutConfig.UDPRouteMustHaveCondition == 0 {
 		timeoutConfig.UDPRouteMustHaveCondition = defaultTimeoutConfig.UDPRouteMustHaveCondition
+	}
+	if timeoutConfig.TelemetryPolicyMustHaveCondition == 0 {
+		timeoutConfig.TelemetryPolicyMustHaveCondition = defaultTimeoutConfig.TelemetryPolicyMustHaveCondition
+	}
+	if timeoutConfig.TraceExportTimeout == 0 {
+		timeoutConfig.TraceExportTimeout = defaultTimeoutConfig.TraceExportTimeout
+	}
+	if timeoutConfig.TraceAbsenceWindow == 0 {
+		timeoutConfig.TraceAbsenceWindow = defaultTimeoutConfig.TraceAbsenceWindow
+	}
+	if timeoutConfig.TraceAbsenceTimeout == 0 {
+		timeoutConfig.TraceAbsenceTimeout = defaultTimeoutConfig.TraceAbsenceTimeout
 	}
 	if timeoutConfig.DefaultTestTimeout == 0 {
 		timeoutConfig.DefaultTestTimeout = defaultTimeoutConfig.DefaultTestTimeout

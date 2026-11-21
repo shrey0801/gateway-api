@@ -37,6 +37,10 @@ func TestSetupTimeoutConfigAppliesAllDefaults(t *testing.T) {
 	assert.NotEqual(t, 5, int(defaults.CreateTimeout.Seconds()))
 	assert.Equal(t, defaults.ListenerSetMustHaveCondition, cfg.ListenerSetMustHaveCondition)
 	assert.Equal(t, defaults.ListenerSetListenersMustHaveConditions, cfg.ListenerSetListenersMustHaveConditions)
+	assert.Equal(t, defaults.TelemetryPolicyMustHaveCondition, cfg.TelemetryPolicyMustHaveCondition)
+	assert.Equal(t, defaults.TraceExportTimeout, cfg.TraceExportTimeout)
+	assert.Equal(t, defaults.TraceAbsenceWindow, cfg.TraceAbsenceWindow)
+	assert.Equal(t, defaults.TraceAbsenceTimeout, cfg.TraceAbsenceTimeout)
 	assert.Equal(t, defaults.RequiredConsecutiveSuccesses, cfg.RequiredConsecutiveSuccesses)
 }
 
