@@ -1,0 +1,173 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: gateway-telemetrypolicy-backend-not-found
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    hostname: backend-not-found.telemetrypolicy.example.com
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: telemetrypolicy-backend-not-found
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: gateway-telemetrypolicy-backend-not-found
+    namespace: gateway-conformance-infra
+  hostnames:
+  - backend-not-found.telemetrypolicy.example.com
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /telemetrypolicy-backend-not-found
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.x-k8s.io/v1alpha1
+kind: XTelemetryPolicy
+metadata:
+  name: backend-not-found
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: gateway-telemetrypolicy-backend-not-found
+  tracing:
+    mode: Enabled
+    provider:
+      backendRef:
+        group: ""
+        kind: Service
+        name: nonexistent-collector
+        port: 4317
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: gateway-telemetrypolicy-invalid-kind
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    hostname: invalid-kind.telemetrypolicy.example.com
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: telemetrypolicy-invalid-kind
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: gateway-telemetrypolicy-invalid-kind
+    namespace: gateway-conformance-infra
+  hostnames:
+  - invalid-kind.telemetrypolicy.example.com
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /telemetrypolicy-invalid-kind
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.x-k8s.io/v1alpha1
+kind: XTelemetryPolicy
+metadata:
+  name: invalid-kind
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: gateway-telemetrypolicy-invalid-kind
+  tracing:
+    mode: Enabled
+    provider:
+      backendRef:
+        group: ""
+        kind: ConfigMap
+        name: invalid-kind
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: gateway-telemetrypolicy-ref-not-permitted
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    hostname: ref-not-permitted.telemetrypolicy.example.com
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: telemetrypolicy-ref-not-permitted
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: gateway-telemetrypolicy-ref-not-permitted
+    namespace: gateway-conformance-infra
+  hostnames:
+  - ref-not-permitted.telemetrypolicy.example.com
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /telemetrypolicy-ref-not-permitted
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: infra-backend-v1
+      port: 8080
+---
+# Cross-namespace provider backendRef without a ReferenceGrant. The test
+# creates the ReferenceGrant in gateway-conformance-app-backend itself once
+# RefNotPermitted has been observed.
+apiVersion: gateway.networking.x-k8s.io/v1alpha1
+kind: XTelemetryPolicy
+metadata:
+  name: ref-not-permitted
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: gateway-telemetrypolicy-ref-not-permitted
+  tracing:
+    mode: Enabled
+    provider:
+      backendRef:
+        group: ""
+        kind: Service
+        name: app-backend-v1
+        namespace: gateway-conformance-app-backend
+        port: 8080

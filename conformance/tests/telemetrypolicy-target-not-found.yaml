@@ -1,0 +1,31 @@
+# This Gateway is not targeted by the policy below; it only exists so that the
+# implementation has a Gateway of its GatewayClass to reconcile in this
+# namespace while the XTelemetryPolicy references a Gateway that does not exist.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: gateway-telemetrypolicy-target-not-found
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    hostname: target-not-found.telemetrypolicy.example.com
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.x-k8s.io/v1alpha1
+kind: XTelemetryPolicy
+metadata:
+  name: target-not-found
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: nonexistent-gateway
+  tracing:
+    mode: ImplementationDefault

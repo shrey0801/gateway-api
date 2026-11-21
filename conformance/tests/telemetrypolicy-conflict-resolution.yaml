@@ -1,0 +1,53 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: gateway-telemetrypolicy-conflict-resolution
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    hostname: conflict-resolution.telemetrypolicy.example.com
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: telemetrypolicy-conflict-resolution
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: gateway-telemetrypolicy-conflict-resolution
+    namespace: gateway-conformance-infra
+  hostnames:
+  - conflict-resolution.telemetrypolicy.example.com
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /telemetrypolicy-conflict-resolution
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: infra-backend-v1
+      port: 8080
+---
+# The second, conflicting policy ("conflicted-2") is created by the test
+# itself once this policy has been accepted, so that the creation order (and
+# therefore which policy takes precedence) is deterministic.
+apiVersion: gateway.networking.x-k8s.io/v1alpha1
+kind: XTelemetryPolicy
+metadata:
+  name: conflicted-1
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: gateway-telemetrypolicy-conflict-resolution
+  tracing:
+    mode: ImplementationDefault
