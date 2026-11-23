@@ -1,0 +1,63 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: gateway-telemetrypolicy-sampling-rate
+  namespace: gateway-conformance-infra
+spec:
+  gatewayClassName: "{GATEWAY_CLASS_NAME}"
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    hostname: sampling-rate.telemetrypolicy.example.com
+    allowedRoutes:
+      namespaces:
+        from: Same
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: telemetrypolicy-sampling-rate
+  namespace: gateway-conformance-infra
+spec:
+  parentRefs:
+  - name: gateway-telemetrypolicy-sampling-rate
+    namespace: gateway-conformance-infra
+  hostnames:
+  - sampling-rate.telemetrypolicy.example.com
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /telemetrypolicy-sampling-rate
+    backendRefs:
+    - group: ""
+      kind: Service
+      name: infra-backend-v1
+      port: 8080
+---
+apiVersion: gateway.networking.x-k8s.io/v1alpha1
+kind: XTelemetryPolicy
+metadata:
+  name: sampling-rate
+  namespace: gateway-conformance-infra
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: Gateway
+    name: gateway-telemetrypolicy-sampling-rate
+  tracing:
+    mode: Enabled
+    provider:
+      backendRef:
+        group: ""
+        kind: Service
+        name: otel-sink # deployed by conformance/base/manifests.yaml
+        port: 4317
+    samplingRate:
+      numerator: 100
+      denominator: 100
+    attributes:
+    - name: gateway_api_conformance.token
+      sourceType: Header
+      headerName: X-Gateway-Api-Conformance-Trace-Token

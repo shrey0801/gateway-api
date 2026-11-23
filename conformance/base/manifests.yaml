@@ -897,3 +897,65 @@ spec:
               - key: tls.key
                 path: key
 ---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-sink
+  namespace: gateway-conformance-infra
+spec:
+  selector:
+    app: otel-sink
+  ports:
+    - name: otlp-grpc
+      protocol: TCP
+      appProtocol: kubernetes.io/h2c
+      port: 4317
+      targetPort: 4317
+    - name: otlp-http
+      protocol: TCP
+      port: 4318
+      targetPort: 4318
+    - name: query
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: otel-sink
+  namespace: gateway-conformance-infra
+  labels:
+    app: otel-sink
+spec:
+  # otel-sink is the OTLP trace sink used by the TelemetryPolicy tests. It
+  # must run with a single replica so that every exported span lands in one
+  # container log stream, which the tests read with DumpEchoLogs.
+  replicas: 1
+  selector:
+    matchLabels:
+      app: otel-sink
+  template:
+    metadata:
+      labels:
+        app: otel-sink
+    spec:
+      containers:
+        - name: otel-sink
+          # Source: https://github.com/kubernetes-sigs/gateway-api-conformance-images/tree/main/otel-sink
+          image: registry.k8s.io/gateway-api/conformance/otel-sink:v0.3.0
+          ports:
+            - name: otlp-grpc
+              containerPort: 4317
+            - name: otlp-http
+              containerPort: 4318
+            - name: query
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+          resources:
+            requests:
+              cpu: 10m
+---
